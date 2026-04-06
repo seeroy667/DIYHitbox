@@ -1,4 +1,20 @@
+/*
+Author Name: Donavan Sirois
+Date: 2026/04/06
+Description: Code to use a Leonardo Arduino for a hitbox in order to play fighting games. The pins and button mappings can be changed.
+*/
 
+/*
+The following code is meant to be used on a computer. The Arduino Leonardo is then emulating a keyboard.
+To use the following, you need to change the board.txt file in the path:
+C:\Users\$USER$\AppData\Local\Arduino15\packages\arduino\hardware\avr\1.8.7
+In the Arduino Leonardo section, the lines to modify are the following leonardo.build.vid and leonardo.build.pid:
+  leonardo.build.vid=0x2341
+  leonardo.build.pid=0x8036
+The HID will now be recognized as a Keyboard.
+*/
+
+// Uncomment the following code to use the Leonardo Arduino as a keyboard
 /*
 #include<Keyboard.h>
 
@@ -119,55 +135,76 @@ void loop() {
     Serial.println("L pressed");
   }
 }
-
 */
+
+/*
+The following code is meant to be used on a Switch Controller. The Arduino Leonardo is then emulating a Switch Controller.
+To use the following, you need to change the board.txt file in the path:
+C:\Users\$USER$\AppData\Local\Arduino15\packages\arduino\hardware\avr\1.8.7
+In the Arduino Leonardo section, the lines to modify are the following leonardo.build.vid and leonardo.build.pid:
+  leonardo.build.vid=0x0f0d
+  leonardo.build.pid=0x00c1
+The HID will now be recognized as a Switch Controller.
+*/
+
+// Uncomment the following code to use the Leonardo Arduino as a Switch Controller
 
 #include <NintendoSwitchControlLibrary.h>
 
+#define STICK_TILT 0x60   // Partial value for walk speed (~37%)
+#define STICK_TILT_NEG 0x60 // Opposite direction partial value
+
 void setup() {
-  pinMode(2,  INPUT_PULLUP); // J - attack
-  pinMode(3,  INPUT_PULLUP); // L - special
-  pinMode(4,  INPUT_PULLUP); // K - jump
-  pinMode(5,  INPUT_PULLUP); // H - shield
-  pinMode(6,  INPUT_PULLUP); // U
-  pinMode(7,  INPUT_PULLUP); // I
-  pinMode(8,  INPUT_PULLUP); // O
-  pinMode(9,  INPUT_PULLUP); // P
-  pinMode(10, INPUT_PULLUP); // D - right
-  pinMode(11, INPUT_PULLUP); // W - up
-  pinMode(12, INPUT_PULLUP); // S - down
-  pinMode(13, INPUT_PULLUP); // A - left
+  pinMode(2,  INPUT_PULLUP); // A - Attack
+  pinMode(3,  INPUT_PULLUP); // B - Special
+  pinMode(4,  INPUT_PULLUP); // Y - Grab
+  pinMode(5,  INPUT_PULLUP); // ZR - Shield
+  pinMode(6,  INPUT_PULLUP); // Tilt modifier
+  pinMode(7,  INPUT_PULLUP); // Jump
+  pinMode(8,  INPUT_PULLUP); // Jump
+  pinMode(9,  INPUT_PULLUP); // Jump
+  pinMode(10, INPUT_PULLUP); // Right
+  pinMode(11, INPUT_PULLUP); // Up + X
+  pinMode(12, INPUT_PULLUP); // Down
+  pinMode(13, INPUT_PULLUP); // Left
 }
 
 void loop() {
-  // Release everything first
+  // Start by reeleasing all buttons
   SwitchControlLibrary().releaseButton(Button::A);
   SwitchControlLibrary().releaseButton(Button::B);
   SwitchControlLibrary().releaseButton(Button::X);
   SwitchControlLibrary().releaseButton(Button::Y);
-  SwitchControlLibrary().releaseButton(Button::L);
-  SwitchControlLibrary().releaseButton(Button::R);
-  SwitchControlLibrary().releaseButton(Button::ZL);
   SwitchControlLibrary().releaseButton(Button::ZR);
-  SwitchControlLibrary().releaseHatButton();
 
-  // D-pad (map to your direction pins)
-  if (digitalRead(11) == LOW) SwitchControlLibrary().pressHatButton(Hat::UP);
-  if (digitalRead(13) == LOW) SwitchControlLibrary().pressHatButton(Hat::LEFT);
-  if (digitalRead(12) == LOW) SwitchControlLibrary().pressHatButton(Hat::DOWN);
-  if (digitalRead(10) == LOW) SwitchControlLibrary().pressHatButton(Hat::RIGHT);
+  // Default stick to neutral
+  uint8_t lx = Stick::NEUTRAL;
+  uint8_t ly = Stick::NEUTRAL;
 
-  // Action buttons — remap these to whatever Smash actions you want
-  if (digitalRead(2)  == LOW) SwitchControlLibrary().pressButton(Button::A);
-  if (digitalRead(3)  == LOW) SwitchControlLibrary().pressButton(Button::B);
-  if (digitalRead(4)  == LOW) SwitchControlLibrary().pressButton(Button::X);
-  if (digitalRead(5)  == LOW) SwitchControlLibrary().pressButton(Button::Y);
-  if (digitalRead(6)  == LOW) SwitchControlLibrary().pressButton(Button::L);
-  if (digitalRead(7)  == LOW) SwitchControlLibrary().pressButton(Button::R);
-  if (digitalRead(8)  == LOW) SwitchControlLibrary().pressButton(Button::ZL);
-  if (digitalRead(9)  == LOW) SwitchControlLibrary().pressButton(Button::ZR);
+  // Check if tilt modifier is held
+  bool tilt = (digitalRead(8) == LOW);
 
-  // Send all inputs at once
+  // Directions — use partial values if tilt modifier is held
+  if (digitalRead(11) == LOW) {
+    ly = tilt ? STICK_TILT : Stick::MIN;  // Up
+    SwitchControlLibrary().pressButton(Button::X); // X on up always
+  }
+  if (digitalRead(12) == LOW) ly = tilt ? STICK_TILT_NEG : Stick::MAX;  // Down
+  if (digitalRead(13) == LOW) lx = tilt ? STICK_TILT : Stick::MIN;      // Left
+  if (digitalRead(10) == LOW) lx = tilt ? STICK_TILT_NEG : Stick::MAX;  // Right
+
+  SwitchControlLibrary().moveLeftStick(lx, ly);
+
+  // Action buttons
+  if (digitalRead(7) == LOW) SwitchControlLibrary().pressButton(Button::A);
+  if (digitalRead(6) == LOW) SwitchControlLibrary().pressButton(Button::B);
+  if (digitalRead(4) == LOW) SwitchControlLibrary().pressButton(Button::Y);
+  if (digitalRead(3) == LOW) SwitchControlLibrary().pressButton(Button::ZR);
+  // Pin 8 is tilt modifier — no button press
+  if (digitalRead(5) == LOW) SwitchControlLibrary().pressButton(Button::X); // Jump
+  if (digitalRead(9) == LOW) SwitchControlLibrary().pressButton(Button::X); // Jump
+  if (digitalRead(2) == LOW) SwitchControlLibrary().pressButton(Button::PLUS); // Menu
+
   SwitchControlLibrary().sendReport();
-  delay(1); // Small delay to avoid flooding the Switch
+  delay(1);
 }
