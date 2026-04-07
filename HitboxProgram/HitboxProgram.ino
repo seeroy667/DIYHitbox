@@ -151,20 +151,22 @@ The HID will now be recognized as a Switch Controller.
 
 #include <NintendoSwitchControlLibrary.h>
 
-#define STICK_TILT 0x60   // Partial value for walk speed (~37%)
-#define STICK_TILT_NEG 0x60 // Opposite direction partial value
+#define STICK_FULL_MIN  0x00   // Full tilt (run)
+#define STICK_FULL_MAX  0xFF   // Full tilt other direction (run)
+#define STICK_TILT_LO   0x48   // Partial tilt low (~28%) - walk speed
+#define STICK_TILT_HI   0xB8   // Partial tilt high (~72%) - walk speed
 
 void setup() {
-  pinMode(2,  INPUT_PULLUP); // A - Attack
-  pinMode(3,  INPUT_PULLUP); // B - Special
-  pinMode(4,  INPUT_PULLUP); // Y - Grab
-  pinMode(5,  INPUT_PULLUP); // ZR - Shield
+  pinMode(2,  INPUT_PULLUP); // X
+  pinMode(3,  INPUT_PULLUP); // A
+  pinMode(4,  INPUT_PULLUP); // B
+  pinMode(5,  INPUT_PULLUP); // Y
   pinMode(6,  INPUT_PULLUP); // Tilt modifier
-  pinMode(7,  INPUT_PULLUP); // Jump
-  pinMode(8,  INPUT_PULLUP); // Jump
-  pinMode(9,  INPUT_PULLUP); // Jump
+  pinMode(7,  INPUT_PULLUP); // ZL
+  pinMode(8,  INPUT_PULLUP); // L
+  pinMode(9,  INPUT_PULLUP); // ZR
   pinMode(10, INPUT_PULLUP); // Right
-  pinMode(11, INPUT_PULLUP); // Up + X
+  pinMode(11, INPUT_PULLUP); // Up
   pinMode(12, INPUT_PULLUP); // Down
   pinMode(13, INPUT_PULLUP); // Left
 }
@@ -175,7 +177,10 @@ void loop() {
   SwitchControlLibrary().releaseButton(Button::B);
   SwitchControlLibrary().releaseButton(Button::X);
   SwitchControlLibrary().releaseButton(Button::Y);
-  SwitchControlLibrary().releaseButton(Button::ZR);
+  SwitchControlLibrary().releaseButton(Button::ZL);
+  SwitchControlLibrary().releaseButton(Button::L);
+  SwitchControlLibrary().releaseButton(Button::PLUS);
+  
 
   // Default stick to neutral
   uint8_t lx = Stick::NEUTRAL;
@@ -186,25 +191,23 @@ void loop() {
 
   // Directions — use partial values if tilt modifier is held
   if (digitalRead(11) == LOW) {
-    ly = tilt ? STICK_TILT : Stick::MIN;  // Up
-    SwitchControlLibrary().pressButton(Button::X); // X on up always
+    ly = tilt ? STICK_TILT_LO : STICK_FULL_MIN;  // Up
+    // SwitchControlLibrary().pressButton(Button::X); // X on up always
   }
-  if (digitalRead(12) == LOW) ly = tilt ? STICK_TILT_NEG : Stick::MAX;  // Down
-  if (digitalRead(13) == LOW) lx = tilt ? STICK_TILT : Stick::MIN;      // Left
-  if (digitalRead(10) == LOW) lx = tilt ? STICK_TILT_NEG : Stick::MAX;  // Right
+  if (digitalRead(12) == LOW) ly = tilt ? STICK_TILT_HI : STICK_FULL_MAX;  // Down
+  if (digitalRead(13) == LOW) lx = tilt ? STICK_TILT_LO : STICK_FULL_MIN;  // Left
+  if (digitalRead(10) == LOW) lx = tilt ? STICK_TILT_HI : STICK_FULL_MAX;  // Right
 
   SwitchControlLibrary().moveLeftStick(lx, ly);
 
   // Action buttons
-  if (digitalRead(7) == LOW) SwitchControlLibrary().pressButton(Button::A);
-  if (digitalRead(6) == LOW) SwitchControlLibrary().pressButton(Button::B);
-  if (digitalRead(4) == LOW) SwitchControlLibrary().pressButton(Button::Y);
-  if (digitalRead(3) == LOW) SwitchControlLibrary().pressButton(Button::ZR);
-  // Pin 8 is tilt modifier — no button press
-  if (digitalRead(5) == LOW) SwitchControlLibrary().pressButton(Button::X); // Jump
-  if (digitalRead(9) == LOW) SwitchControlLibrary().pressButton(Button::X); // Jump
-  if (digitalRead(2) == LOW) SwitchControlLibrary().pressButton(Button::PLUS); // Menu
+  if (digitalRead(7) == LOW) SwitchControlLibrary().pressButton(Button::X);
+  if (digitalRead(6) == LOW) SwitchControlLibrary().pressButton(Button::A);
+  if (digitalRead(4) == LOW) SwitchControlLibrary().pressButton(Button::B);
+  if (digitalRead(3) == LOW) SwitchControlLibrary().pressButton(Button::Y);
+  if (digitalRead(5) == LOW) SwitchControlLibrary().pressButton(Button::ZL);
+  if (digitalRead(9) == LOW) SwitchControlLibrary().pressButton(Button::L);
+  if (digitalRead(2) == LOW) SwitchControlLibrary().pressButton(Button::PLUS);
 
   SwitchControlLibrary().sendReport();
-  delay(1);
 }
